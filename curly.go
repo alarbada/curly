@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-
-	"github.com/mitchellh/mapstructure"
+	"net/url"
 )
 
 type Curly struct {
@@ -16,8 +15,12 @@ type Curly struct {
 
 func New(method, path string) *Curly {
 	req, err := http.NewRequest(method, path, nil)
-
 	return &Curly{req, err}
+}
+
+func Base(path string) *Curly {
+	url := &url.URL{Path: path}
+	return &Curly{req: &http.Request{URL: url}}
 }
 
 func (this *Curly) Header(key, value string) *Curly {
@@ -56,21 +59,5 @@ func (this *Curly) Do(output any) error {
 		return err
 	}
 
-	rawOutput := make(map[string]any)
-	if err := json.Unmarshal(body, &rawOutput); err != nil {
-		return err
-	}
-
-	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		// Prevents mistakes with typos in struct tags / field names instead of
-		// just putting a useless 0 value
-		ErrorUnset: true,
-		Result:     output,
-		TagName:    "json",
-	})
-	if err != nil {
-		return err
-	}
-
-	return decoder.Decode(rawOutput)
+	return json.Unmarshal(body, output)
 }
